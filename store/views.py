@@ -1,52 +1,71 @@
-from django.shortcuts import render
-from django.db.models import Q
-from django.core.paginator import Paginator
-from django.http import JsonResponse
-from .models import Product, Customer
+from django.shortcuts import render, get_object_or_404
 from django.db.models import Count
-def home(request):
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Product, Collection
+from .serializers import ProductSerializer, CollectionSerializer
 
-    #product_list = Product.objects.all().order_by("title")
-    product_list = Customer.objects.annotate(orders_count=Count('order'))
+
+@api_view(['GET', 'POST'])
+def product_list(request):
+    if request.method == 'GET':
+        queryset = Product.objects.select_related("collection").all()
+        serializer = ProductSerializer(queryset, many=True)
+        return Response(serializer.data)
+    elif request.method == 'POST':
+        serializer = ProductSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+@api_view(['GET', 'PUT', 'DELETE'])
+def product_detail(request, id):
+    product = get_object_or_404(Product, pk=id)
+    if request.method == 'GET':
+        serializer = ProductSerializer(product)
+        return Response(serializer.data) 
+    elif request.method == 'PUT':
+        serializer = ProductSerializer(product, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+    elif request.method == 'DELETE':
+        if product.orderitems.count() > 0:
+            return Response({"error": "Product cannot be deleted because it's assosiated with an order item."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        product.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
     
+
+### COLLECTIONS
+@api_view(['GET', 'POST'])
+def collection_list(request):
+    if request.method == 'GET':
+        queryset = Collection.objects.annotate(products_count=Count("products")).all()
+        serializer = CollectionSerializer(queryset, many=True)
+        return Response(serializer.data)
+    elif request.method == 'POST':
+        serializer = CollectionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
     
-    paginator = Paginator(product_list, 10)
-    page_number = request.GET.get("page", 1)
-    page_object = paginator.get_page(page_number)
-    page_object.adjusted_elided_pages = paginator.get_elided_page_range(page_number, on_each_side=2)
-    
-    return render(request, "store/home.html", {"page_object": page_object})
 
-def search(request):
-    query = request.GET.get("q", "")
-    results = Product.objects.filter(title__icontains=query)
-
-    paginator = Paginator(results, 4)
-    page_number = request.GET.get("page", 1)
-    page_object = paginator.get_page(page_number)
-    page_object.adjusted_elided_pages = paginator.get_elided_page_range(page_number, on_each_side=2)
-    return render(request, "store/search.html", {"results": results, "page_object": page_object, "query": query})
-
-def listing_api(request):
-    page_number = request.GET.get("page", 1)   
-    per_page = request.GET.get("per_page", 10)
-    product = Product.objects.all().order_by("title")
-
-    paginator = Paginator(product, per_page)
-    page_obj = paginator.get_page(page_number)
-
-    data = [{
-        "title": kw.title,
-        "description": kw.description,
-        "unit_price": kw.unit_price
-        } for kw in page_obj.object_list]
-
-    payload = {
-        "page": {
-            "current": page_obj.number,
-            "has_next": page_obj.has_next(),
-            "has_previous": page_obj.has_previous(),
-        },
-        "data": data
-    }
-    return JsonResponse(payload)
+@api_view(['GET', 'PUT', 'DELETE'])
+def collection_detail(request, pk):
+    collection = get_object_or_404(
+        Collection.objects.annotate(products_count=Count("products")), 
+        pk=pk)
+    if request.method == 'GET':
+        serializer = CollectionSerializer(collection)
+        return Response(serializer.data) 
+    elif request.method == 'PUT':
+        serializer = CollectionSerializer(collection, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+    elif request.method == 'DELETE':
+        if collection.products.count() > 0:
+            return Response({"error": "Collection cannot be deleted because it has featured products"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        collection.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
