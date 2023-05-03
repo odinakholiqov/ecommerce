@@ -1,13 +1,14 @@
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Count
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import generics
+from rest_framework.mixins import CreateModelMixin
+from rest_framework.viewsets import GenericViewSet
 from rest_framework import status, viewsets
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
-from .models import Product, Collection, OrderItem, Review
-from .serializers import ProductSerializer, CollectionSerializer, ReviewSerializer
+from .models import Product, Collection, OrderItem, Review, Cart, CartItem
+from .serializers import ProductSerializer, CollectionSerializer, ReviewSerializer, CartSerializer, CartItemSerializer
 from .filters import ProductFilter
 from .pagination import DefaultPagination
 
@@ -50,3 +51,13 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         return {'product_id': self.kwargs['product_pk']}
+    
+### CARTS
+class CartViewSet(viewsets.ModelViewSet):
+    queryset = Cart.objects.prefetch_related('items__product').all()
+    serializer_class = CartSerializer
+
+### CARTITEMS
+class CardItemViewSet(viewsets.ModelViewSet):
+    queryset = CartItem.objects.all()
+    serializer_class = CartItemSerializer
