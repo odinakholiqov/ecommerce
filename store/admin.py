@@ -120,3 +120,4 @@ class CollectionAdmin(admin.ModelAdmin):
         return super().get_queryset(request).annotate(
             products_count=Count('products')
         )
+    

@@ -1,3 +1,4 @@
+from logging import raiseExceptions
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Count
 from django_filters.rest_framework import DjangoFilterBackend
@@ -9,8 +10,8 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
-from .models import Customer, Product, Collection, OrderItem, Review, Cart, CartItem
-from .serializers import CustomerSerializer, ProductSerializer, CollectionSerializer, \
+from .models import Customer, Order, Product, Collection, OrderItem, Review, Cart, CartItem
+from .serializers import CreateOrderSerializer, CustomerSerializer, OrderSerializer, ProductSerializer, CollectionSerializer, \
                         ReviewSerializer, CartSerializer, \
                         CartItemSerializer, AddCardItemSerializer, \
                         UpdateCartItemSerializer
@@ -117,4 +118,37 @@ class CustomerViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data)
+
+class OrderViewSet(viewsets.ModelViewSet):
+    # queryset = Order.objects.all()
+    # serializer_class = OrderSerializer
+    
+    permission_classes = [IsAuthenticated]
+    
+    def create(self, request, *args, **kwargs):
+        serializer = CreateOrderSerializer(
+            data=request.data,
+            context={'user_id': self.request.user.id}
+            )
+        serializer.is_valid(raise_exception=True)
+        order = serializer.save()
+        serializer = OrderSerializer(order)
+        
+        return Response(serializer.data) 
+
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return CreateOrderSerializer
+        return OrderSerializer
+
+    def get_queryset(self):
+        user = self.request.user 
+
+        if self.request.user.is_staff:
+            return Order.objects.all()
+        
+        (customer_id, created) = Customer.objects.only('id').get_or_create(user_id=user.id)
+        return Order.objects.filter(customer_id=customer_id)
+        
 
