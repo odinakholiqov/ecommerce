@@ -10,8 +10,8 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter, OrderingFilter
-from .models import Customer, Order, Product, Collection, OrderItem, Review, Cart, CartItem
-from .serializers import CreateOrderSerializer, CustomerSerializer, OrderSerializer, ProductSerializer, CollectionSerializer, \
+from .models import Customer, Order, Product, Collection, OrderItem, ProductImage, Review, Cart, CartItem
+from .serializers import CreateOrderSerializer, CustomerSerializer, OrderSerializer, ProductImageSerializer, ProductSerializer, CollectionSerializer, \
                         ReviewSerializer, CartSerializer, \
                         CartItemSerializer, AddCardItemSerializer, \
                         UpdateCartItemSerializer, UpdateOrderSerializer
@@ -162,3 +162,11 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Order.objects.filter(customer_id=customer_id)
         
 
+class ProductImageViewSet(viewsets.ModelViewSet):
+    serializer_class = ProductImageSerializer
+
+    def get_queryset(self):
+        return ProductImage.objects.filter(product_id=self.kwargs['product_pk'])
+    
+    def get_serializer_context(self):
+        return {'product_id': self.kwargs['product_pk']}
