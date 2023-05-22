@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.validators import MinValueValidator, FileExtensionValidator
 from uuid import uuid4
 from django.conf import settings
@@ -49,6 +51,8 @@ class ProductImage(models.Model):
         #validators=[FileExtensionValidator(allowed_extensions=["pdg"])]
         validators=[validate_file_size]
     )
+    # content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    # content_object = GenericForeignKey()
 
 class Customer(models.Model):
     MEMBERSHIP_BRONZE = 'B'
