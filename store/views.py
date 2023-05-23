@@ -1,3 +1,6 @@
+from django.core.mail import EmailMessage, BadHeaderError
+from templated_mail.mail import BaseEmailMessage
+
 from logging import raiseExceptions
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Count
@@ -22,6 +25,17 @@ from .permissions import IsAdminOrReadOnly, ViewCustomerHistoryPermission
 
 ### PRODUCTS
 class ProductViewSet(viewsets.ModelViewSet):
+    
+    try:
+        message = EmailMessage('subject', 'message', 
+                               'from@store.com',
+                               ['odina@knolikov.com'])
+        message.attach_file('store/static/images/rul.gif')
+        message.send()
+
+    except BadHeaderError:
+        pass
+    
     queryset = Product.objects.prefetch_related("images").all()
     serializer_class = ProductSerializer 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
