@@ -10,22 +10,26 @@ class WebsiteUser(HttpUser):
 
     @task(2)
     def view_products(self):
-        collection_id = randint(2, 8)
+        collection_id = randint(2, 6)
         #sending request to prod endpoint
-        self.client.get(f'/store/products/{collection_id}', name='/store/products')
+        self.client.get(
+            f'/store/products/{collection_id}', 
+            name='/store/products')
 
     @task(4) # user is twice likely to execute below task rathen than the 1st one
     def view_product(self):
         product_id = randint(1, 30)
-        self.client.get(f'/store/producs/{product_id}', name='/store/products/:id')
+        self.client.get(
+            f'/store/products/{product_id}', 
+            name='/store/products/:id')
 
     @task(1)
     def add_to_cart(self):
         product_id = randint(1, 10)
         self.client.post(
             f'/store/carts/{self.cart_id}/items/', 
-            name='/store/carts/:id/items/',
-            json={'product_id': product_id, 'quantity': 2}
+            name='/store/carts/items/',
+            json={'product_id': product_id, 'quantity': 1}
         )
 
     # this get called every time when a new user starts browsing our web site

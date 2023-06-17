@@ -1,6 +1,5 @@
 from django.core.mail import EmailMessage, BadHeaderError
 from templated_mail.mail import BaseEmailMessage
-
 from logging import raiseExceptions
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Count
@@ -22,6 +21,51 @@ from .serializers import CreateOrderSerializer, CustomerSerializer, OrderSeriali
 from .filters import ProductFilter
 from .pagination import DefaultPagination
 from .permissions import IsAdminOrReadOnly, ViewCustomerHistoryPermission
+import requests
+from django.core.cache import cache
+from django.views.decorators.cache import cache_page
+from rest_framework.views import APIView
+from django.utils.decorators import method_decorator
+import logging
+
+logger = logging.getLogger(__name__)
+
+# def say_hello(request):
+#     key = 'httpbin_result'
+#     if cache.get(key) is None:
+#         response = requests.get('https://httpbin.org/delay/2')
+#         data = response.json()
+#         cache.set(key, data)
+#     return render(request, 'store/home.html', {'name': cache.get(key)})
+
+# @cache_page(5 * 60)
+# def say_hello(request):
+#     response = requests.get('https://httpbin.org/delay/2')
+#     data = response.json()
+#     return render(request, 'store/home.html', {'name': data})
+
+
+class HelloView(APIView):
+    # @method_decorator(cache_page(5 * 60))
+    def get(self, request):
+        try:
+            logger.info('Calling httpbin')
+            response = requests.get('https://httpbin.org/delay/2')
+            logger.info('Received the response')
+            data = response.json()
+        except requests.ConnectionError:
+            logger.info('httpbin is offline')
+            
+        return render(request, 'store/home.html', {'name': data})
+
+
+
+
+
+
+
+
+
 
 ### PRODUCTS
 class ProductViewSet(viewsets.ModelViewSet):
@@ -38,7 +82,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     # except BadHeaderError:
     #     pass
     
-    queryset = Product.objects.all()
+    queryset = Product.objects.prefetch_related('images').all()
     serializer_class = ProductSerializer 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = ProductFilter
